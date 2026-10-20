@@ -1,3 +1,4 @@
+```python
 # RSPF_to_Python.py (excerpt)
 
 class RSPFCompiler:
@@ -54,3 +55,4 @@ reflexivity_output = compiler.execute_operator(
     'Ω', 
     compiler.execute_operator('[...]', user_input)
 )
+```

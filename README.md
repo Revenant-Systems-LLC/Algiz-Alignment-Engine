@@ -153,7 +153,7 @@ SAGE-RAGE.sln
 |-- src/
 |   |-- SageRage.Core         Core library (operators, providers, ethics, QC, metrics)
 |   |-- SageRage.Console      Interactive console app (text, audio, proxy modes)
-|   |-- SageRage.Cli          CLI tool (stub -- planned)
+|   |-- SageRage.Cli          CLI tool (eval command: raw vs governed A/B benchmark)
 |   |-- SageRage.Proxy        HTTP alignment proxy server
 |
 |-- Tests/
@@ -436,7 +436,7 @@ See `RevSys_OfficialUPD.md` for implementation roadmap details.
 | Proxy test suite | Implemented (25 tests) |
 | Secure key management | Implemented |
 | Audio integration (Gemini Live) | Partial (audio path exists, full pipeline pending) |
-| CLI tool | Stub |
+| CLI tool | Partial (`eval` A/B benchmark command) |
 | Persistent state (Mnemosyne) | Partial |
 | Chi-Temporal Extension | Exploratory (see whitepaper) |
 | Evaluation benchmarks | Planned |
