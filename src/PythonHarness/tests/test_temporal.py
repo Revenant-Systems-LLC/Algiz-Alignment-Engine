@@ -117,6 +117,28 @@ def test_chrono_identity_clamps_excessive_drift() -> None:
     assert updated.mission_parameters == ("m",)
 
 
+def test_chrono_identity_clamp_above_one_hits_bound_without_overshoot() -> None:
+    substrate = TemporalSubstrate(TemporalConfig(identity_drift_max=1.5, identity_dimensions=2))
+    current = IdentityVector(("m",), (1.0, 0.0), updated_at=T0, version=0)
+    # Raw drift 1.6; a linear blend scaled by max/drift overshoots the cap (~1.555).
+    updated, drift = substrate.chrono_identity(current, [-0.6, 0.8], now=T0)
+    assert drift == pytest.approx(1.5)
+    assert updated.vector == pytest.approx((-0.5, math.sqrt(0.75)))
+
+
+@pytest.mark.parametrize("max_drift", [1.0, 1.5])
+def test_chrono_identity_antipodal_proposal_keeps_current_vector(max_drift: float) -> None:
+    substrate = TemporalSubstrate(
+        TemporalConfig(identity_drift_max=max_drift, identity_dimensions=2)
+    )
+    current = IdentityVector(("m",), (1.0, 0.0), updated_at=T0, version=0)
+    # No rotation plane exists for an exact antipode. The old linear blend either
+    # collapsed to the zero vector (cap 1.0) or snapped to the antipode (drift 2.0).
+    updated, drift = substrate.chrono_identity(current, [-1.0, 0.0], now=T0)
+    assert drift <= max_drift
+    assert updated.vector == pytest.approx((1.0, 0.0))
+
+
 def test_chrono_identity_rejects_dimension_mismatch() -> None:
     substrate = TemporalSubstrate(TemporalConfig(identity_dimensions=4))
     current = IdentityVector(("m",), (1.0, 0.0, 0.0, 0.0), updated_at=T0, version=0)

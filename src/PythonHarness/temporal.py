@@ -51,6 +51,25 @@ def _cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
     return max(-1.0, min(1.0, _dot(left, right) / (mag_left * mag_right)))
 
 
+def _rotate_toward(
+    origin: Sequence[float], target: Sequence[float], cosine: float
+) -> tuple[float, ...]:
+    """Return the unit vector at ``cosine`` similarity to ``origin``, turned toward ``target``.
+
+    The rotation stays in the plane spanned by both vectors, so the result's cosine
+    distance from ``origin`` is exactly ``1 - cosine``. When ``target`` is numerically
+    (anti)parallel to ``origin`` no such plane exists, and ``origin`` is returned unchanged.
+    """
+    base = _normalize(tuple(origin))
+    along = _dot(target, base)
+    orthogonal = tuple(t - along * b for t, b in zip(target, base))
+    if math.sqrt(_dot(orthogonal, orthogonal)) < 1e-6:
+        return base
+    direction = _normalize(orthogonal)
+    sine = math.sqrt(max(0.0, 1.0 - cosine * cosine))
+    return _normalize(tuple(cosine * b + sine * d for b, d in zip(base, direction)))
+
+
 def seed_identity_vector(
     mission_parameters: Sequence[str], dimensions: int
 ) -> tuple[float, ...]:
@@ -220,13 +239,10 @@ class TemporalSubstrate:
             new_vector = proposed
             realized_drift = drift
         else:
-            # Interpolate toward the proposal just enough to hit the drift bound.
-            alpha = max_drift / drift if drift > 0 else 0.0
-            blended = tuple(
-                base + alpha * (target - base)
-                for base, target in zip(current.vector, proposed)
-            )
-            new_vector = _normalize(blended)
+            # Clamp on cosine distance directly: rotate toward the proposal just enough
+            # to hit the drift bound. A linear blend misses the bound and, once the bound
+            # exceeds 1.0, can swing past the antipode and overshoot it.
+            new_vector = _rotate_toward(current.vector, proposed, 1.0 - max_drift)
             realized_drift = 1.0 - _cosine_similarity(current.vector, new_vector)
 
         updated = IdentityVector(
