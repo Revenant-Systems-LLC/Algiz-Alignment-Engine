@@ -1,3 +1,4 @@
+```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,3 +7,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 </Project>
+```
