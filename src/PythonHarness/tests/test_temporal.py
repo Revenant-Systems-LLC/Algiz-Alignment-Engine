@@ -32,6 +32,16 @@ def fixed_wall(moment: datetime = T0):
     return lambda: moment
 
 
+class MovableWall:
+    """Deterministic wall clock that only moves when a test advances it."""
+
+    def __init__(self, moment: datetime = T0) -> None:
+        self.moment = moment
+
+    def __call__(self) -> datetime:
+        return self.moment
+
+
 # --------------------------------------------------------------------------- τt
 def test_chrono_index_accumulates_operator_durations() -> None:
     substrate = TemporalSubstrate(TemporalConfig())
@@ -195,6 +205,22 @@ def test_consequence_constraint_injected_into_next_draft() -> None:
     engine.process("Second cycle should inherit the τc constraint.")
     draft_prompts = [call[0] for call in provider.calls if "Draft a safe" in call[0]]
     assert any("[τc]" in prompt for prompt in draft_prompts)
+
+
+def test_repeated_experience_decays_before_reinforcement() -> None:
+    wall = MovableWall()
+    config = AgentConfig(
+        enable_layer0=False,
+        temporal=TemporalConfig(enabled=True, decay_half_life_seconds=100.0),
+    )
+    engine = GovernedEngine(FakeProvider(), config, clock=StepClock(step=1.0), wall_clock=wall)
+    engine.start()
+    engine.process("Summarize quarterly revenue trends.")
+    wall.moment = T0 + timedelta(seconds=100)  # one half-life later
+    second = engine.process("Summarize quarterly revenue trends.")
+    # Stale weight decays 1.0 -> 0.5 first; reinforcement then adds 1.0 (not 1.0 + 1.0).
+    assert [item.weight for item in engine._experiences] == pytest.approx([1.5])
+    assert second.metadata["temporal"]["decay_info_loss"] == pytest.approx(0.5)
 
 
 def test_temporal_state_persists_across_sessions(tmp_path) -> None:

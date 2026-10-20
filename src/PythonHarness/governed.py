@@ -224,11 +224,13 @@ class GovernedEngine:
             self._last_session_at = now_wall
             signals.elapsed_seconds = max(0.0, cycle_elapsed)
 
-            # τd: reinforce this interaction, decay all experiences, then bound the store.
+            # τd: decay all experiences, reinforce this interaction, then bound the store.
+            # Decay must come first: reinforcing resets an item's decay clock, so decaying
+            # afterwards would let its stale weight skip the elapsed interval entirely.
             summary = sanitized_input[:80]
-            reinforced = self._substrate.reinforce(self._experiences, summary, now=now_wall)
-            decayed, decay_loss = self._substrate.chrono_decay(reinforced, now=now_wall)
-            compacted, compaction_loss = self._substrate.compact(decayed)
+            decayed, decay_loss = self._substrate.chrono_decay(self._experiences, now=now_wall)
+            reinforced = self._substrate.reinforce(decayed, summary, now=now_wall)
+            compacted, compaction_loss = self._substrate.compact(reinforced)
             self._experiences = compacted
             signals.decay_info_loss = decay_loss
             signals.compaction_info_loss = compaction_loss
